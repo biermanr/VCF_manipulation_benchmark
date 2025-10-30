@@ -50,12 +50,13 @@ def generate_time_chart(results: List[Dict]) -> str:
     labels = [format_approach_name(r['approach']) for r in results]
     times = [float(r['time_seconds']) for r in results]
 
-    # Build mermaid chart
-    chart = """```mermaid
+    # Build mermaid chart - split header and body to avoid format string issues with {init}
+    chart_header = """```mermaid
 %%{init: {'theme':'base'}}%%
 xychart-beta
     title "Execution Time by Approach"
-    x-axis [{}]
+"""
+    chart_body = """    x-axis [{}]
     y-axis "Time (seconds)" 0 --> {}
     bar [{}]
 ```""".format(
@@ -64,7 +65,7 @@ xychart-beta
         ', '.join(str(t) for t in times)
     )
 
-    return chart
+    return chart_header + chart_body
 
 def generate_memory_chart(results: List[Dict]) -> str:
     """Generate mermaid.js xychart for memory usage."""
@@ -75,12 +76,13 @@ def generate_memory_chart(results: List[Dict]) -> str:
     labels = [format_approach_name(r['approach']) for r in sorted_results]
     memory_mb = [float(r['memory_kb']) / 1024 for r in sorted_results]
 
-    # Build mermaid chart
-    chart = """```mermaid
+    # Build mermaid chart - split header and body to avoid format string issues with {init}
+    chart_header = """```mermaid
 %%{init: {'theme':'base'}}%%
 xychart-beta
     title "Peak Memory Usage by Approach"
-    x-axis [{}]
+"""
+    chart_body = """    x-axis [{}]
     y-axis "Memory (MB)" 0 --> {}
     bar [{}]
 ```""".format(
@@ -89,7 +91,7 @@ xychart-beta
         ', '.join(f'{m:.1f}' for m in memory_mb)
     )
 
-    return chart
+    return chart_header + chart_body
 
 def generate_results_table(results: List[Dict]) -> str:
     """Generate markdown table with all results."""
