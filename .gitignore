@@ -1,0 +1,5 @@
+*.vcf
+*.swp
+
+#This is the rust executable built with rustc -O scripts/rust_approach.rs
+rust_approach
