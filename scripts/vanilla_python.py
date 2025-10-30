@@ -19,7 +19,7 @@ with open(args.input) as f_in, open(args.output, "w") as f_out:
 
         # Change ID column (2nd) and write out 
         m = line.split("\t")
-        m[2] = "chr"+m[0]+":"+m[1]+":"+m[3]+":"+m[4]
+        m[2] = m[0]+":"+m[1]+":"+m[3]+":"+m[4]
         line = "\t".join(m)
         f_out.write(line)
 

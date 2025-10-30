@@ -52,8 +52,14 @@ def generate_time_chart(results: List[Dict]) -> str:
 
     # Build mermaid chart - split header and body to avoid format string issues with {init}
     chart_header = """```mermaid
-%%{init: {'theme':'base'}}%%
-xychart-beta
+---
+config:
+  themeVariables:
+    xyChart:
+      backgroundColor: '#ffffff'
+      plotColorPalette: '#000000'
+---
+xychart horizontal
     title "Execution Time by Approach"
 """
     chart_body = """    x-axis [{}]
@@ -78,8 +84,14 @@ def generate_memory_chart(results: List[Dict]) -> str:
 
     # Build mermaid chart - split header and body to avoid format string issues with {init}
     chart_header = """```mermaid
-%%{init: {'theme':'base'}}%%
-xychart-beta
+---
+config:
+  themeVariables:
+    xyChart:
+      backgroundColor: '#ffffff'
+      plotColorPalette: '#000000'
+---
+xychart horizontal
     title "Peak Memory Usage by Approach"
 """
     chart_body = """    x-axis [{}]
@@ -106,7 +118,7 @@ def generate_results_table(results: List[Dict]) -> str:
         md5 = r.get('md5', 'N/A')
         md5_counts[md5] = md5_counts.get(md5, 0) + 1
 
-    expected_md5 = max(md5_counts.items(), key=lambda x: x[1])[0] if md5_counts else None
+    expected_md5 = "eb0ac3e094d859b69458d89ff855f243"
 
     for r in results:
         approach = format_approach_name(r['approach'])
@@ -125,35 +137,6 @@ def generate_results_table(results: List[Dict]) -> str:
         table += f"| {approach} | {time_sec:.3f} | {memory_mb:.1f} | `{md5_display}` | {note} |\n"
 
     return table
-
-def generate_md5_section(results: List[Dict]) -> str:
-    """Generate detailed MD5 checksum section."""
-
-    section = """## MD5 Checksums
-
-The following table shows the MD5 checksums of the output files. All approaches should produce identical output (except scikit-allel, which has known limitations).
-
-| Approach | MD5 Checksum |
-|----------|--------------|
-"""
-
-    for r in results:
-        approach = format_approach_name(r['approach'])
-        md5 = r.get('md5', 'N/A')
-        section += f"| {approach} | `{md5}` |\n"
-
-    # Add validation note
-    md5_values = [r.get('md5', 'N/A') for r in results if r['approach'] != 'baseline_cat' and r['approach'] != 'python_scikit_allel']
-    unique_md5s = set(md5_values)
-
-    if len(unique_md5s) == 1:
-        section += "\n!!! success \"Validation Passed\"\n"
-        section += "    All approaches (except baseline and scikit-allel) produce identical output files. ✓\n"
-    else:
-        section += "\n!!! warning \"MD5 Mismatch\"\n"
-        section += f"    Found {len(unique_md5s)} different MD5 checksums. Some approaches may be producing different output.\n"
-
-    return section
 
 def generate_performance_insights(results: List[Dict]) -> str:
     """Generate insights section comparing performance."""
@@ -221,7 +204,6 @@ def main():
     time_chart = generate_time_chart(results)
     memory_chart = generate_memory_chart(results)
     results_table = generate_results_table(results)
-    md5_section = generate_md5_section(results)
     insights = generate_performance_insights(results)
 
     # Build full markdown document
@@ -247,25 +229,6 @@ The charts and tables below show the performance characteristics of each approac
 ## Detailed Results
 
 {results_table}
-
-{md5_section}
-
-## Interpreting the Results
-
-### Time (seconds)
-- Lower is better
-- Includes reading input, processing, and writing output
-- Baseline (cat) shows the minimum time for pure I/O
-
-### Memory (MB)
-- Lower is better for most use cases
-- Peak resident set size (RSS) during execution
-- High memory approaches may struggle with very large files
-
-### MD5 Checksums
-- All approaches should produce identical output (except scikit-allel)
-- Mismatches indicate bugs or different behavior
-- Baseline (cat) has a different checksum since it doesn't modify the file
 
 ## Notes
 
