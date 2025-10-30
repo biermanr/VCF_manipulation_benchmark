@@ -96,9 +96,9 @@ jobs:
           name: test-data
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: true
+          version: "0.9.6"
 
       - name: Download Rust binary
         if: matrix.approach == 'rust'
