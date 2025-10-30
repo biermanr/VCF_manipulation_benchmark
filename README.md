@@ -109,25 +109,102 @@ chr22	10519412	chr22:10519412:G:T	G	T	.
 ```
 
 
+I've created multiple scripts including `scripts/awk_approach.sbatch`
+which take different approaches to this task.
 
+To get an estimated lower-bound of what I'm expecting is the
+best possible performance, we can just `cat` the file as is
+to another VCF, making no changes. This should capture the
+unavoidable input/output cost.
+```bash
+/usr/bin/time -f "%e %M" cat example.vcf > cat_out.vcf
+```
 
+## Documentation
 
-I've created a script `scripts/awk_approach.sbatch` which runs this command, and this is successful.
+Comprehensive benchmark results and analysis are available on the **[project documentation site](https://rbierman.github.io/vcf_ID_replacements_approaches/)** (GitHub Pages).
 
+The documentation includes:
+- Detailed descriptions of each approach
+- Automated benchmark results with charts
+- MD5 checksums for output validation
+- Performance analysis and conclusions
 
-I've created additional scripts such as `scripts/run_vanilla_python.sbatch` and corresponding `scripts/vanilla_python.py`
-which produces the exact same output as the awk approach for comparison.
+### Building Documentation Locally
 
-I had trouble getting `scikit-allel` to work with `write_vcf` so I gave up on it since it's marked as "Preliminary"
-in the documentation. I think this is surprising. The output is wrong/truncated but I'll still benchmark it.
+To build and preview the documentation on your local machine:
 
-It was also suggested to me to try cyvcf2 which I've never used before.
-This was really nice to write and reads like english. It's just a bit slower than
-some of the other approaches. I'm guessing this is because it's fully parsing
-the VCF including the genotypes, while the other approaches just parse the
-first few columns. Would be interesting to do a comparison between the tools
-for a more complex VCF task.
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
+# Serve documentation locally (auto-reloads on changes)
+mkdocs serve
 
+# Build static site
+mkdocs build
+```
 
+The documentation will be available at `http://127.0.0.1:8000/`
 
+## GitHub Actions Workflow
+
+The repository includes a comprehensive GitHub Actions workflow (`.github/workflows/benchmark.yml`) that:
+
+1. Downloads a test VCF file from 1000 Genomes Project
+2. Runs all 9 approaches in parallel using a **matrix strategy**
+3. Uses **[uv](https://github.com/astral-sh/uv)** for fast Python dependency management
+4. Measures timing and memory profiling for each approach
+5. Calculates MD5 checksums to verify output correctness
+6. Generates documentation with mermaid.js charts
+7. Deploys results to GitHub Pages
+
+The workflow runs on every push to `main` and can also be triggered manually via GitHub Actions UI.
+
+### Key Technologies
+
+- **Matrix Strategy**: Single job definition runs 8 approaches in parallel
+- **uv**: Extremely fast Python package manager with automatic dependency resolution from script metadata (PEP 723)
+- **Conditional Steps**: Different runtime setups (Python/uv, Rust, bash) based on approach
+
+### Benchmark Metrics
+
+Each approach is evaluated on:
+- **Execution time** (seconds) - measured with `/usr/bin/time`
+- **Peak memory usage** (MB) - maximum resident set size
+- **MD5 checksum** - verifies output correctness
+
+## Approaches Tested
+
+1. **Baseline (cat)** - Simple file copy to measure I/O overhead
+2. **AWK** - Classic Unix text processing
+3. **Python (vanilla)** - Basic Python with string operations
+4. **Python (maxsplit)** - Optimized split with maxsplit parameter
+5. **Python (maxsplit+dowhile)** - Further optimized header handling
+6. **Python (pandas)** - DataFrame-based processing
+7. **Python (cyvcf2)** - VCF-specific library with htslib
+8. **Python (scikit-allel)** - Genomics-focused library
+9. **Rust** - Compiled systems language
+
+## NOTES
+
+- The rust approach is surprisingly slow. I'm probably doing something wrong
+- The `scikit-allel` `write_vcf` function is marked as "Preliminary" in the docs and doesn't output genotypes
+    - This means it won't output the same results as the other approaches
+    - Also means I definitely wouldn't use `scikit-allel` for this task
+- cyvcf2 was really nice to write and reads like english
+    - It's slower than some of the other approaches and I'm guessing
+      this is because it's fully parsing the VCF including the genotypes,
+      while the other approaches just parse the first few columns.
+
+## Contributing
+
+Feel free to:
+- Try the code on your own data
+- Propose optimizations to existing approaches
+- Add new approaches
+- Report issues or suggest improvements
+
+## License
+
+This is a personal learning project. Feel free to use and modify as you see fit.

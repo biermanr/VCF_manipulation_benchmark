@@ -1,0 +1,186 @@
+name: Benchmark VCF Processing Approaches
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  prepare-data:
+    name: Download and Prepare Test Data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download VCF data
+        run: |
+          wget -q -O - https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/1kGP_high_coverage_Illumina.chr22.filtered.SNV_INDEL_SV_phased_panel.vcf.gz \
+              | gunzip -c \
+              | head -n 100000 \
+              | awk -v OFS='\t' '$1 !~ "^#" { $3="." } 1' \
+              > example.vcf
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Compile Rust program
+        run: |
+          rustc scripts/rust_approach.rs -o rust_approach -C opt-level=3
+
+      - name: Upload test data
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data
+          path: example.vcf
+          retention-days: 1
+
+      - name: Upload Rust binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-binary
+          path: rust_approach
+          retention-days: 1
+
+  benchmark:
+    name: ${{ matrix.approach }}
+    needs: prepare-data
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - approach: baseline_cat
+            executable: ./scripts/cat_baseline.sh
+            note: "Does not actually do any work - MD5 will differ"
+
+          - approach: awk
+            executable: ./scripts/awk_approach.sh
+
+          - approach: python_vanilla
+            executable: ./scripts/vanilla_python.py
+
+          - approach: python_maxsplit
+            executable: ./scripts/vanilla_maxsplit_python.py
+
+          - approach: python_maxsplit_dowhile
+            executable: ./scripts/vanilla_maxsplit_dowhile_python.py
+
+          - approach: python_pandas
+            executable: ./scripts/pandas_python.py
+
+          - approach: python_cyvcf2
+            executable: ./scripts/cyvcf2_python.py
+
+          - approach: python_scikit_allel
+            executable: ./scripts/scikit_allel_python.py
+            note: "Does not output genotypes - MD5 will differ"
+
+          - approach: rust
+            executable: ./rust_approach
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test data
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Download Rust binary
+        if: matrix.approach == 'rust'
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binary
+
+      - name: Make Rust binary executable
+        if: matrix.approach == 'rust'
+        run: chmod +x rust_approach
+
+      - name: Run benchmark
+        run: |
+          /usr/bin/time -f "%e %M" -o timing.txt ${{ matrix.executable }} -i example.vcf -o out.vcf 2>&1
+
+      - name: Calculate MD5
+        run: |
+          md5sum out.vcf | awk '{print $1}' > md5.txt
+
+      - name: Extract timing info
+        run: |
+          TIME=$(awk '{print $1}' timing.txt)
+          MEM=$(awk '{print $2}' timing.txt)
+          MD5=$(cat md5.txt)
+          NOTE="${{ matrix.note }}"
+          if [ -n "$NOTE" ]; then
+            echo "{\"approach\": \"${{ matrix.approach }}\", \"time_seconds\": $TIME, \"memory_kb\": $MEM, \"md5\": \"$MD5\", \"note\": \"$NOTE\"}" > results.json
+          else
+            echo "{\"approach\": \"${{ matrix.approach }}\", \"time_seconds\": $TIME, \"memory_kb\": $MEM, \"md5\": \"$MD5\"}" > results.json
+          fi
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.approach }}
+          path: results.json
+          retention-days: 1
+
+  collect-results:
+    name: Collect and Generate Documentation
+    needs: benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: results
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MkDocs
+        run: |
+          pip install mkdocs-material
+
+      - name: Combine results
+        run: |
+          python scripts/generate_results.py
+
+      - name: Build documentation
+        run: |
+          mkdocs build
+
+      - name: Upload documentation artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy-docs:
+    name: Deploy to GitHub Pages
+    needs: collect-results
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

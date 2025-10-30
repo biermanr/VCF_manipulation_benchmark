@@ -47,8 +47,9 @@ fn main() -> std::io::Result<()> {
         let line = line?;
 
         // TODO don't have to do this check after headers are passed
+        // TODO maybe use take_until or something
         if line.starts_with('#') {
-            writeln!(writer, "{}", line)?;
+            writeln!(writer, "{}", line)?; //What's the diff between writeline and writer.write_all?
             continue;
         }
 

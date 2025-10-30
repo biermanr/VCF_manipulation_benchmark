@@ -42,5 +42,5 @@ if [ -z "$VCF_IN" ] || [ -z "$VCF_OUT" ]; then
     usage
 fi
 
-# Run awk command
-awk -v OFS='\t' '$1 !~ "^#" { $3=$1":"$2":"$4":"$5 } 1' "$VCF_IN" > "$VCF_OUT"
+# Run cat command
+cat "$VCF_IN" > "$VCF_OUT"
