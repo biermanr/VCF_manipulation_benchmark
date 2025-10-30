@@ -1,7 +1,7 @@
 ## Benchmarking simple tabular file (VCF) column adjustment approaches
 
 Comprehensive benchmark results and analysis are available on the 
-**[project documentation site](https://rbierman.github.io/vcf_ID_replacements_approaches/)**
+**[project documentation site](https://biermanr.github.io/VCF_manipulation_benchmark)**
 
 The documentation includes:
 - Detailed descriptions of each approach

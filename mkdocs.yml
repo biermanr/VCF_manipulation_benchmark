@@ -1,8 +1,8 @@
 site_name: VCF ID Replacement Approaches Benchmark
 site_description: Comparing different approaches to a simple VCF text processing task
 site_author: rbierman
-repo_url: https://github.com/rbierman/vcf_ID_replacements_approaches
-repo_name: vcf_ID_replacements_approaches
+repo_url: https://github.com/biermanr/VCF_manipulation_benchmark
+repo_name: VCF_manipulation_benchmark
 
 theme:
   name: material
